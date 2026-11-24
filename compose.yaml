@@ -1,0 +1,68 @@
+services:
+  nifi:
+    image: apache/nifi:1.28.1
+    ports:
+      - "127.0.0.1:8443:8443"
+    environment:
+      SINGLE_USER_CREDENTIALS_USERNAME: learner
+      SINGLE_USER_CREDENTIALS_PASSWORD: ${NIFI_PASSWORD:?Set NIFI_PASSWORD in .env}
+    volumes:
+      - nasa-input:/tmp/nasa-input
+  kafka:
+    image: apache/kafka:3.9.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx512m
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+  spark:
+    image: apache/spark:3.5.5
+    restart: unless-stopped
+    profiles: ["processing"]
+    user: "0"
+    working_dir: /app
+    volumes:
+      - ./spark:/app:ro
+      - spark-checkpoints:/checkpoints
+    entrypoint: ["/opt/spark/bin/spark-submit"]
+    command:
+      - "--packages"
+      - "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5,com.datastax.spark:spark-cassandra-connector_2.12:3.5.1"
+      - "--conf"
+      - "spark.cassandra.connection.host=cassandra"
+      - "/app/stream_logs.py"
+  cassandra:
+    image: cassandra:4.1
+    environment:
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 100M
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "127.0.0.1:8050:8050"
+    depends_on:
+      - cassandra
+  nasa-web:
+    build: ./nasa_web
+    ports:
+      - "127.0.0.1:8081:8081"
+    volumes:
+      - nasa-input:/logs
+
+volumes:
+  kafka-data:
+  spark-checkpoints:
+  cassandra-data:
+  nasa-input:

@@ -8,9 +8,30 @@ NASA archive sample or local request → NiFi → Kafka → Spark → Cassandra 
 
 The live view groups Kafka arrivals from the last 15 minutes. Hourly and daily views group requests by their original timestamp (UTC). Each Cassandra row is keyed by Kafka partition and offset, so Spark can retry writing a message without adding another row. The demo uses one partition and computes chart totals in memory.
 
+## Screenshots
+
+### Live View (Last 15 Minutes)
+
+![Live dashboard showing 5 events received in the last 15 minutes](<images/live-ingestion.png>)
+*Real-time ingestion rate of requests received by Kafka per minute (UTC).*
+
+![HTTP status codes for the last 15 minutes](<images/live-status.png>)
+*HTTP status code breakdown (`200` and `502`) for requests in the last 15 minutes.*
+
+![Top requested paths in the last 15 minutes](<images/live-paths.png>)
+*Most frequently requested paths in the last 15 minutes.*
+
+### Historical View (All Stored Events)
+
+![Overall HTTP status codes across all stored events](<images/overall-status.png>)
+*Overall HTTP status code distribution across the full dataset.*
+
+![Overall top 10 requested paths](<images/overall-paths.png>)
+*Top 10 most requested paths across all stored logs.*
+
 ## Run locally (PowerShell)
 
-Install Docker Desktop with Linux containers and Python 3. From a fresh checkout, copy `.env.example` to `.env` and set `NIFI_PASSWORD` to a unique password of at least 12 characters. Start the services:
+Install Docker Desktop with Linux containers and Python 3. From a fresh checkout, copy `.env.example` to `.env` and set `NIFI_PASSWORD` to a unique password of at least 12 characters. Open Docker Desktop and start the services:
 
 ```powershell
 docker compose up -d --build nifi kafka cassandra nasa-web dashboard
